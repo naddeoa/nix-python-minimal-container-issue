@@ -29,7 +29,7 @@
         mkPoetry = (poetry2nix.lib.mkPoetry2Nix { pkgs = pkgs; });
 
         app = mkPoetry.mkPoetryApplication { 
-            projectDir = ./.; 
+            projectDir = self; 
             overrides = mkPoetry.defaultPoetryOverrides.extend (final: prev: {
               pywrap = prev.pywrap.overridePythonAttrs ( old: {
                 buildInputs = old.buildInputs ++ [ prev.setuptools ];
@@ -38,40 +38,25 @@
             # python = nixpkgs.legacyPackages.${system}.python310;
         };
 
-        # pyEnv = mkPoetry.mkPoetryEnv {
-        #   projectDir = self;
-        # };
-
-        appSource = pkgs.stdenv.mkDerivation {
-          name = "app-source";
-          src = ./app;
-          installPhase = ''
-            mkdir -p $out/app
-            cp -r ./* $out/app/
-          '';
-        };
-
         container = pkgs.dockerTools.buildLayeredImage {
           name = "app";
           tag = "latest";
           contents = [
             app
-            # pyEnv
             pkgs.coreutils
             pkgs.bashInteractive
+            pkgs.findutils
           ];
           config = {
-            # Cmd = [ "${app.python}/bin/python" ];
             Cmd = [ "${app}/bin/app" ];
             WorkingDir = "/app";
 
           };
-          # config.Cmd = [ "${pkgs.bashInteractive}/bin/bash" ];
         };
       in
       {
         app = app;
-        # env = pyEnv;
+        pkgs = pkgs;
         packages = {
           app = app;
           container = container;
